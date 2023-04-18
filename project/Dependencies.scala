@@ -20,7 +20,9 @@ object Dependencies {
   // Versions
   val scalaCoreVersion        = "2.11.12"
   val scalaVersions           = Seq("2.11.12", "2.12.11")
-  val mongodbDriverVersion    = "3.12.5"
+
+  // keep in sync with the mongoDb dep at https://github.com/ActionIQ/aiq/blob/master/project/Dependencies.scala
+  val mongodbDriverVersion    = "4.7.0"
   val sparkVersion            = "2.4.0"
   val slf4jVersion            = "1.7.16"
 
@@ -31,7 +33,7 @@ object Dependencies {
   val junitInterfaceVersion   = "0.11"
 
   // Libraries
-  val mongodbDriver     = "org.mongodb" % "mongo-java-driver" % mongodbDriverVersion
+  val mongodbDriver     = "org.mongodb.scala" %% "mongo-scala-driver" % mongodbDriverVersion
   val sparkCore         = "org.apache.spark" %% "spark-core" % sparkVersion % "provided"
   val sparkSql          = "org.apache.spark" %% "spark-sql" % sparkVersion % "provided"
   val slf4j             = "org.slf4j" % "slf4j-api" % slf4jVersion % "provided"

@@ -23,18 +23,17 @@ import java.util.concurrent.TimeUnit
 import scala.collection.JavaConverters._
 import scala.concurrent.duration.Duration
 import scala.reflect.ClassTag
-
 import org.apache.spark.api.java.JavaSparkContext
 import org.apache.spark.api.java.function.Function
 import org.apache.spark.{SparkConf, SparkContext}
-
 import org.bson.codecs.configuration.CodecRegistry
 import org.bson.{BsonDocument, Document}
-import com.mongodb.MongoClient
-import com.mongodb.client.{MongoCollection, MongoDatabase}
+import org.mongodb.scala.{MongoClient, MongoCollection, MongoDatabase}
 import com.mongodb.connection.ServerVersion
 import com.mongodb.spark.config.{MongoCollectionConfig, ReadConfig, WriteConfig}
 import com.mongodb.spark.connection.{DefaultMongoClientFactory, MongoClientCache}
+
+import scala.concurrent.Await
 
 /**
  * The MongoConnector companion object
@@ -185,7 +184,8 @@ case class MongoConnector(mongoClientFactory: MongoClientFactory)
    */
   def withCollectionDo[D, T](config: MongoCollectionConfig, code: MongoCollection[D] => T)(implicit ct: ClassTag[D]): T =
     withDatabaseDo(config, { db =>
-      val collection = db.getCollection[D](config.collectionName, classTagToClassOf(ct))
+      val collection = db.getCollection[D](config.collectionName)
+
       code(config match {
         case writeConfig: WriteConfig => collection.withWriteConcern(writeConfig.writeConcern)
         case readConfig: ReadConfig   => collection.withReadConcern(readConfig.readConcern).withReadPreference(readConfig.readPreference)
@@ -234,14 +234,17 @@ case class MongoConnector(mongoClientFactory: MongoClientFactory)
   }
 
   private[spark] def hasSampleAggregateOperator(readConfig: ReadConfig): Boolean = {
-    val buildInfo: BsonDocument = withDatabaseDo(readConfig, { db => db.runCommand(new Document("buildInfo", 1), classOf[BsonDocument]) })
+    val buildInfo: BsonDocument = withDatabaseDo(readConfig, { db =>
+      val fut = db.runCommand(new Document("buildInfo", 1), readConfig.readPreference).toFuture()
+      Await.result(fut, Duration.Inf).toBsonDocument()
+    })
     val versionArray: util.List[Integer] = buildInfo.getArray("versionArray").asScala.take(3).map(_.asInt32().getValue.asInstanceOf[Integer]).asJava
     new ServerVersion(versionArray).compareTo(new ServerVersion(3, 2)) >= 0
   }
 
   private[spark] def acquireClient(): MongoClient = MongoConnector.mongoClientCache.acquire(mongoClientFactory)
   private[spark] def releaseClient(client: MongoClient): Unit = MongoConnector.mongoClientCache.release(client)
-  private[spark] def codecRegistry: CodecRegistry = withMongoClientDo({ client => client.getMongoClientOptions.getCodecRegistry })
+  private[spark] def codecRegistry(database: String): CodecRegistry = withMongoClientDo({ client => client.getDatabase(database).codecRegistry })
 
   override def close(): Unit = MongoConnector.mongoClientCache.shutdown()
 

@@ -20,12 +20,14 @@ import java.util
 
 import scala.collection.JavaConverters._
 import scala.util.{Failure, Success, Try}
-
 import org.bson._
 import com.mongodb.spark.MongoConnector
 import com.mongodb.spark.config.ReadConfig
 import com.mongodb.spark.exceptions.MongoPartitionerException
 import com.mongodb.{MongoCommandException, MongoNotPrimaryException}
+
+import scala.concurrent.duration.Duration
+import scala.concurrent.Await
 
 /**
  * The SplitVector Partitioner.
@@ -73,9 +75,17 @@ class MongoSplitVectorPartitioner extends MongoPartitioner {
       .append("max", new BsonDocument(partitionKey, minKeyMaxKey._2))
 
     connector.withDatabaseDo(readConfig, { db =>
-      Try(db.runCommand(splitVectorCommand, classOf[BsonDocument])) match {
+      def dbCommandResult = {
+        val fut = db.runCommand(splitVectorCommand).toFuture()
+        Await.result(fut, Duration.Inf).toBsonDocument()
+      }
+
+      Try(dbCommandResult) match {
         case Success(result: BsonDocument) =>
-          val locations: Seq[String] = connector.withMongoClientDo(mongoClient => mongoClient.getAllAddress.asScala.map(_.getHost).distinct)
+          val locations: Seq[String] = connector.withMongoClientDo { mongoClient =>
+            //            mongoClient.getAllAddress.asScala.map(_.getHost).distinct
+            mongoClient.getClusterDescription.getServerDescriptions.asScala.flatMap(_.getHosts.asScala).distinct
+          }
           createPartitions(partitionKey, result, locations, minKeyMaxKey)
         case Failure(e: MongoNotPrimaryException) =>
           logWarning("The `SplitVector` command must be run on the primary node")

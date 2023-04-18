@@ -18,11 +18,12 @@ package com.mongodb.spark.sql
 
 import java.io.StringWriter
 import java.lang
+import java.util.Base64
 
 import org.bson.{BsonBinary, BsonRegularExpression, BsonValue}
 import org.bson.codecs.{BsonValueCodec, EncoderContext}
-import org.bson.internal.Base64
-import org.bson.json.{JsonWriter, JsonWriterSettings, StrictJsonWriter, JsonMode, Converter}
+//import org.bson.internal.Base64
+import org.bson.json.{Converter, JsonMode, JsonWriter, JsonWriterSettings, StrictJsonWriter}
 
 private[sql] object BsonValueToJson {
   val codec = new BsonValueCodec()
@@ -53,7 +54,8 @@ private[sql] object BsonValueToJson {
       .binaryConverter(new Converter[BsonBinary] {
         override def convert(value: BsonBinary, writer: StrictJsonWriter): Unit = {
           writer.writeStartObject()
-          writer.writeString("$binary", Base64.encode(value.getData))
+          //          writer.writeString("$binary", Base64.encode(value.getData))
+          writer.writeString("$binary", Base64.getEncoder.encode(value.getData).toString)
           writer.writeString("$type", f"${value.getType}%02X")
           writer.writeEndObject()
         }
@@ -66,4 +68,3 @@ private[sql] object BsonValueToJson {
     stringWriter.getBuffer.toString.split(":", 2)(1).trim
   }
 }
-

@@ -17,14 +17,16 @@
 package com.mongodb.spark.rdd.partitioner
 
 import scala.annotation.tailrec
-
 import org.bson.conversions.Bson
 import org.bson.{BsonDocument, BsonMinKey, BsonValue}
-import com.mongodb.client.MongoCollection
 import com.mongodb.client.model.{Filters, Sorts}
 import com.mongodb.spark.MongoConnector
 import com.mongodb.spark.config.ReadConfig
 import com.mongodb.spark.exceptions.MongoPartitionerException
+import org.mongodb.scala.MongoCollection
+
+import scala.concurrent.Await
+import scala.concurrent.duration.Duration
 
 private[partitioner] trait MongoPaginationPartitioner {
 
@@ -55,12 +57,13 @@ private[partitioner] trait MongoPaginationPartitioner {
           BsonDocument.parse(s"""{"$partitionKey": 1, "_id": 0}""")
         }
         val newHead: Option[BsonValue] = connector.withCollectionDo(readConfig, { coll: MongoCollection[BsonDocument] =>
-          Option(coll.find()
-            .filter(filter)
-            .skip(skipValue)
-            .sort(sort)
-            .projection(projection)
-            .first()).map(doc => doc.get(partitionKey))
+          Option {
+            val fut = coll.find()
+              .filter(filter).skip(skipValue).sort(sort)
+              .projection(projection)
+              .first().toFuture()
+            Await.result(fut, Duration.Inf)
+          }.map(doc => doc.get(partitionKey))
         })
         if (newHead.isEmpty || (results.nonEmpty && newHead.get == results.head)) {
           results

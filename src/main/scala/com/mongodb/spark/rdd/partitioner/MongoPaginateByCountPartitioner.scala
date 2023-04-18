@@ -17,11 +17,10 @@
 package com.mongodb.spark.rdd.partitioner
 
 import scala.util.{Failure, Success, Try}
-
 import org.bson.BsonDocument
-import com.mongodb.client.MongoCollection
 import com.mongodb.spark.MongoConnector
 import com.mongodb.spark.config.ReadConfig
+import org.mongodb.scala.MongoCollection
 
 /**
  * The pagination by count partitioner.

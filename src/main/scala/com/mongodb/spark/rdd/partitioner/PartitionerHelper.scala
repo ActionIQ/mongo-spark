@@ -18,11 +18,13 @@ package com.mongodb.spark.rdd.partitioner
 
 import scala.annotation.tailrec
 import scala.collection.JavaConverters._
-
 import org.bson._
 import com.mongodb.spark.MongoConnector
 import com.mongodb.spark.annotation.DeveloperApi
 import com.mongodb.spark.config.ReadConfig
+
+import scala.concurrent.Await
+import scala.concurrent.duration.Duration
 
 /**
  * :: DeveloperApi ::
@@ -89,7 +91,8 @@ object PartitionerHelper {
    * @return the locations
    */
   def locations(connector: MongoConnector): Seq[String] =
-    connector.withMongoClientDo(mongoClient => mongoClient.getAllAddress.asScala.map(_.getHost).distinct)
+    //    connector.withMongoClientDo(mongoClient => mongoClient.getAllAddress.asScala.map(_.getHost).distinct)
+    connector.withMongoClientDo(mongoClient => mongoClient.getClusterDescription.getServerDescriptions.asScala.flatMap(_.getHosts.asScala).distinct)
 
   /**
    * Runs the `collStats` command and returns the results
@@ -100,7 +103,11 @@ object PartitionerHelper {
    */
   def collStats(connector: MongoConnector, readConfig: ReadConfig): BsonDocument = {
     val collStatsCommand: BsonDocument = new BsonDocument("collStats", new BsonString(readConfig.collectionName))
-    connector.withDatabaseDo(readConfig, { db => db.runCommand(collStatsCommand, readConfig.readPreference, classOf[BsonDocument]) })
+    //    connector.withDatabaseDo(readConfig, { db => db.runCommand(collStatsCommand, readConfig.readPreference, classOf[BsonDocument]) })
+    connector.withDatabaseDo(readConfig, { db =>
+      val fut = db.runCommand(collStatsCommand, readConfig.readPreference).toFuture()
+      Await.result(fut, Duration.Inf).toBsonDocument()
+    })
   }
 
   /**

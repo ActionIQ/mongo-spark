@@ -25,7 +25,8 @@ import scala.util.{Failure, Success, Try}
 import org.apache.spark.SparkConf
 
 import org.bson.Document
-import com.mongodb.{ReadPreference, Tag, TagSet, TaggableReadPreference}
+import org.mongodb.scala.ReadPreference
+import com.mongodb.{Tag, TagSet, TaggableReadPreference}
 import org.apache.spark.api.java.JavaSparkContext
 import org.apache.spark.sql.{SQLContext, SparkSession}
 

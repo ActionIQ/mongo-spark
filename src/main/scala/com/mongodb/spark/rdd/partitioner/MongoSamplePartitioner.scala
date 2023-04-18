@@ -20,13 +20,15 @@ import java.util
 
 import scala.collection.JavaConverters._
 import scala.util.{Failure, Success, Try}
-
 import org.bson.{BsonDocument, BsonInt64}
 import com.mongodb.MongoCommandException
-import com.mongodb.client.MongoCollection
 import com.mongodb.client.model.{Aggregates, Projections, Sorts}
 import com.mongodb.spark.MongoConnector
 import com.mongodb.spark.config.ReadConfig
+import org.mongodb.scala.MongoCollection
+
+import scala.concurrent.Await
+import scala.concurrent.duration.Duration
 
 /**
  * The Sample Partitioner.
@@ -85,7 +87,10 @@ class MongoSamplePartitioner extends MongoPartitioner {
         val count = if (matchQuery.isEmpty) {
           results.getNumber("count").longValue()
         } else {
-          connector.withCollectionDo(readConfig, { coll: MongoCollection[BsonDocument] => coll.countDocuments(matchQuery) })
+          connector.withCollectionDo(readConfig, { coll: MongoCollection[BsonDocument] =>
+            val fut = coll.countDocuments(matchQuery).toFuture()
+            Await.result(fut, Duration.Inf)
+          })
         }
         val avgObjSizeInBytes = results.get("avgObjSize", new BsonInt64(0)).asNumber().longValue()
         val numDocumentsPerPartition: Int = math.floor(partitionSizeInBytes.toFloat / avgObjSizeInBytes).toInt
@@ -96,12 +101,14 @@ class MongoSamplePartitioner extends MongoPartitioner {
         } else {
           val samples = connector.withCollectionDo(readConfig, {
             coll: MongoCollection[BsonDocument] =>
-              coll.aggregate(List(
+              val fut = coll.aggregate(List(
                 Aggregates.`match`(matchQuery),
                 Aggregates.sample(numberOfSamples),
                 Aggregates.project(Projections.include(partitionKey)),
                 Aggregates.sort(Sorts.ascending(partitionKey))
-              ).asJava).allowDiskUse(true).into(new util.ArrayList[BsonDocument]()).asScala
+              )).allowDiskUse(true).toFuture()
+              Await.result(fut, Duration.Inf)
+            //                .into(new util.ArrayList[BsonDocument]()).asScala
           })
           def collectSplit(i: Int): Boolean = (i % samplesPerPartition == 0) || !matchQuery.isEmpty && i == count - 1
           val rightHandBoundaries = samples.zipWithIndex.collect {

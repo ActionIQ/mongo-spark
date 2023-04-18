@@ -17,12 +17,14 @@
 package com.mongodb.spark.rdd.partitioner
 
 import scala.util.{Failure, Success, Try}
-
 import org.bson.{BsonDocument, BsonInt64}
 import com.mongodb.MongoCommandException
-import com.mongodb.client.MongoCollection
 import com.mongodb.spark.MongoConnector
 import com.mongodb.spark.config.ReadConfig
+import org.mongodb.scala.MongoCollection
+
+import scala.concurrent.Await
+import scala.concurrent.duration.Duration
 
 /**
  * The pagination by size partitioner.
@@ -78,7 +80,10 @@ class MongoPaginateBySizePartitioner extends MongoPartitioner with MongoPaginati
         val count = if (matchQuery.isEmpty) {
           results.getNumber("count").longValue()
         } else {
-          connector.withCollectionDo(readConfig, { coll: MongoCollection[BsonDocument] => coll.countDocuments(matchQuery) })
+          connector.withCollectionDo(readConfig, { coll: MongoCollection[BsonDocument] =>
+            val fut = coll.countDocuments(matchQuery).toFuture()
+            Await.result(fut, Duration.Inf)
+          })
         }
         if (numDocumentsPerPartition >= count) {
           if (count == 0) {

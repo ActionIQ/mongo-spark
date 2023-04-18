@@ -17,14 +17,17 @@
 package com.mongodb.spark.rdd.partitioner
 
 import java.util
+
 import scala.collection.JavaConverters._
 import org.bson.{BsonBoolean, BsonDocument, BsonMaxKey, BsonMinKey}
 import com.mongodb.ServerAddress
-import com.mongodb.client.MongoCollection
 import com.mongodb.client.model.{Filters, Projections, Sorts}
 import com.mongodb.spark.MongoConnector
 import com.mongodb.spark.config.ReadConfig
+import org.mongodb.scala.MongoCollection
 
+import scala.concurrent.Await
+import scala.concurrent.duration.Duration
 import scala.util.{Failure, Success, Try}
 
 /**
@@ -61,9 +64,11 @@ class MongoShardedPartitioner extends MongoPartitioner {
 
     val configCollectionMetadata = connector.withCollectionDo(
       ReadConfig("config", "collections"), { collection: MongoCollection[BsonDocument] =>
-        collection.find(Filters.eq(ID_FIELD, ns))
+        val fut = collection.find(Filters.eq(ID_FIELD, ns))
           .projection(Projections.include(ID_FIELD, UUID_FIELD, DROPPED_FIELD))
           .first()
+          .toFuture()
+        Await.result(fut, Duration.Inf)
       }
     )
 
@@ -84,10 +89,10 @@ class MongoShardedPartitioner extends MongoPartitioner {
 
       val chunks: Seq[BsonDocument] = connector.withCollectionDo(
         ReadConfig("config", "chunks"), { collection: MongoCollection[BsonDocument] =>
-          collection.find(chunksMatchPredicate)
+          val fut = collection.find(chunksMatchPredicate)
             .projection(Projections.include("min", "max", "shard"))
-            .sort(Sorts.ascending("min"))
-            .into(new util.ArrayList[BsonDocument]).asScala
+            .sort(Sorts.ascending("min")).toFuture()
+          Await.result(fut, Duration.Inf)
         }
       )
 
@@ -147,8 +152,11 @@ To split the collections into multiple partitions connect to the MongoDB node di
   private[partitioner] def mapShards(connector: MongoConnector): Map[String, Seq[String]] = {
     connector.withCollectionDo(
       ReadConfig("config", "shards"), { collection: MongoCollection[BsonDocument] =>
-        Map(collection.find().projection(Projections.include("_id", "host")).into(new util.ArrayList[BsonDocument]).asScala
-          .map(shard => (shard.getString("_id").getValue, getHosts(shard.getString("host").getValue))): _*)
+
+        val fut = collection.find().projection(Projections.include("_id", "host")).toFuture()
+        val result = Await.result(fut, Duration.Inf)
+          .map(shard => shard.getString("_id").getValue -> getHosts(shard.getString("host").getValue))
+        Map(result: _*)
       }
     )
   }

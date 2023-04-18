@@ -21,7 +21,7 @@ package com.mongodb.spark.connection
 import scala.annotation.tailrec
 import scala.collection.concurrent.TrieMap
 
-import com.mongodb.MongoClient
+import com.mongodb.client.MongoClient
 
 /**
  * Atomically counts references to MongoClients

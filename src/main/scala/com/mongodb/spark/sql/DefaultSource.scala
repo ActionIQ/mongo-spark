@@ -17,18 +17,19 @@
 package com.mongodb.spark.sql
 
 import scala.collection.JavaConverters._
-
 import org.apache.spark.sql.SaveMode._
 import org.apache.spark.sql.sources._
 import org.apache.spark.sql.types.StructType
-import org.apache.spark.sql.{DataFrame, SQLContext, SaveMode}
-
+import org.apache.spark.sql.{DataFrame, SaveMode, SQLContext}
 import org.bson.conversions.Bson
 import org.bson.{BsonArray, BsonDocument, BsonType, Document}
-import com.mongodb.client.MongoCollection
 import com.mongodb.spark.config.{ReadConfig, WriteConfig}
 import com.mongodb.spark.rdd.MongoRDD
 import com.mongodb.spark.{MongoConnector, MongoSpark}
+import org.mongodb.scala.MongoCollection
+
+import scala.concurrent.Await
+import scala.concurrent.duration.Duration
 
 /**
  * A MongoDB based DataSource
@@ -64,7 +65,10 @@ class DefaultSource extends DataSourceRegister with RelationProvider with Schema
     val writeConfig = WriteConfig(sqlContext.sparkContext.getConf, parameters)
     val mongoConnector = MongoConnector(writeConfig.asOptions)
     lazy val collectionExists: Boolean = mongoConnector.withDatabaseDo(
-      writeConfig, { db => db.listCollectionNames().asScala.toList.contains(writeConfig.collectionName) }
+      writeConfig, { db =>
+      val fut = db.listCollectionNames.toFuture()
+      Await.result(fut, Duration.Inf).contains(writeConfig.collectionName)
+    }
     )
     mode match {
       case Append => MongoSpark.save(data, writeConfig)

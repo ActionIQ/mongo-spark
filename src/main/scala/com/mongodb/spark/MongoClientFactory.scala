@@ -18,7 +18,7 @@ package com.mongodb.spark
 
 import java.io.Serializable
 
-import com.mongodb.MongoClient
+import org.mongodb.scala.MongoClient
 
 /**
  * A factory for creating MongoClients
