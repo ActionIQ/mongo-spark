@@ -17,8 +17,9 @@
 package com.mongodb.spark
 
 import com.mongodb.client.model.{UpdateOptions, Updates}
-import com.mongodb.client.{MongoCollection, MongoDatabase}
-import com.mongodb.{MongoClient, MongoClientURI, ReadPreference}
+import com.mongodb.client.{MongoClient, MongoClients, MongoCollection, MongoDatabase}
+import com.mongodb.{ConnectionString, ReadPreference}
+import com.mongodb.spark.internal.MongoClientURI
 import org.apache.spark.sql.SparkSession
 import org.apache.spark.{SparkConf, SparkContext}
 import org.bson.{BsonDocument, BsonString, Document}
@@ -60,7 +61,7 @@ class TestHelper extends Logging {
 
   val mongoClientURI: String = Properties.propOrElse(MONGODB_URI_SYSTEM_PROPERTY_NAME, DEFAULT_URI)
 
-  lazy val mongoClient: MongoClient = new MongoClient(new MongoClientURI(mongoClientURI))
+  lazy val mongoClient: MongoClient = MongoClients.create(new ConnectionString(mongoClientURI))
 
   def getMongoClientURI: String = mongoClientURI
   def getMongoClient(): MongoClient = mongoClient

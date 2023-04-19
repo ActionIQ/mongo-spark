@@ -20,14 +20,14 @@ package com.mongodb.spark.connection
 
 import java.util.concurrent.{Executors, ThreadFactory, TimeUnit}
 
+import com.mongodb.client.MongoClient
+
 import scala.annotation.tailrec
 import scala.collection.JavaConverters._
 import scala.collection.concurrent.TrieMap
 import scala.concurrent.duration.Duration
 import scala.util.{Failure, Success, Try}
-
-import com.mongodb.MongoClient
-import com.mongodb.spark.{Logging, MongoClientFactory}
+import com.mongodb.spark.{Logging, SparkMongoClientFactory}
 
 /**
  * A lockless cache for MongoClients.
@@ -39,12 +39,12 @@ import com.mongodb.spark.{Logging, MongoClientFactory}
 private[spark] final class MongoClientCache(keepAlive: Duration) extends Logging {
 
   private val refCounter = new MongoClientRefCounter
-  private val cache = new TrieMap[MongoClientFactory, MongoClient]
-  private val clientToKey = new TrieMap[MongoClient, MongoClientFactory]
+  private val cache = new TrieMap[SparkMongoClientFactory, MongoClient]
+  private val clientToKey = new TrieMap[MongoClient, SparkMongoClientFactory]
   private val deferredReleases = new TrieMap[MongoClient, ReleaseTask]
 
   @tailrec
-  def acquire(mongoClientFactory: MongoClientFactory): MongoClient = {
+  def acquire(mongoClientFactory: SparkMongoClientFactory): MongoClient = {
     cache.get(mongoClientFactory) match {
       case Some(mongoClient) =>
         refCounter.canAcquire(mongoClient) match {
@@ -158,7 +158,7 @@ private[spark] final class MongoClientCache(keepAlive: Duration) extends Logging
 
   private def logClient(mongoClient: MongoClient, closing: Boolean = false): Unit = {
     val status = if (closing) "Closing" else "Creating"
-    logInfo(s"""$status MongoClient: ${mongoClient.getServerAddressList.asScala.map(_.toString).mkString("[", ",", "]")}""")
+    logInfo(s"""$status MongoClient: ${mongoClient.getClusterDescription.getServerDescriptions.asScala.flatMap(_.getHosts.asScala).mkString("[", ",", "]")}""")
   }
 
 }

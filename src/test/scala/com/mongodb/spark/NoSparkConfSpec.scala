@@ -16,7 +16,7 @@
 
 package com.mongodb.spark
 
-import com.mongodb.MongoClient
+import com.mongodb.client.MongoClient
 import com.mongodb.spark.config.{ReadConfig, WriteConfig}
 import com.mongodb.spark.connection.DefaultMongoClientFactory
 import com.mongodb.spark.sql.{Character, _}
@@ -82,7 +82,7 @@ class NoSparkConfSpec extends RequiresMongoDB {
 
 }
 
-case class CustomMongoClientFactory(mongoClientURI: String) extends MongoClientFactory {
+case class CustomMongoClientFactory(mongoClientURI: String) extends SparkMongoClientFactory {
   private final val proxy: DefaultMongoClientFactory = DefaultMongoClientFactory(mongoClientURI)
   def create(): MongoClient = proxy.create()
 }

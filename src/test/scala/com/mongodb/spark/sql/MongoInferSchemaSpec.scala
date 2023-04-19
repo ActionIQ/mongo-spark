@@ -18,11 +18,11 @@ package com.mongodb.spark.sql
 
 import scala.collection.JavaConverters._
 import org.apache.spark.sql.types.DataTypes.{createArrayType, createStructField, createStructType}
-import org.apache.spark.sql.types.{StructField, DataTypes, StructType, ArrayType, MapType, StringType, IntegerType}
+import org.apache.spark.sql.types.{ArrayType, DataTypes, IntegerType, MapType, StringType, StructField, StructType}
 import org.bson.conversions.Bson
 import org.bson.{BsonDocument, Document}
-import com.mongodb.MongoClient
 import com.mongodb.spark._
+import com.mongodb.MongoClientSettings
 import org.bson.types.Decimal128
 import org.scalatest.prop.TableDrivenPropertyChecks
 
@@ -338,7 +338,7 @@ class MongoInferSchemaSpec extends RequiresMongoDB with MongoDataGenerator with 
 
   implicit class DocHelpers(val pipeline: Seq[Bson]) {
     def toBson: Seq[BsonDocument] =
-      pipeline.map(_.toBsonDocument(classOf[BsonDocument], MongoClient.getDefaultCodecRegistry))
+      pipeline.map(_.toBsonDocument(classOf[BsonDocument], MongoClientSettings.getDefaultCodecRegistry))
   }
 
 }

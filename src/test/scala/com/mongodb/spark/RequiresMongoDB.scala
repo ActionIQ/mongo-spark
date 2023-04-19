@@ -26,7 +26,7 @@ import org.apache.spark.{SparkConf, SparkContext}
 
 import org.bson.{BsonDocument, Document}
 import com.mongodb.Implicits._
-import com.mongodb.MongoClient
+import com.mongodb.client.MongoClient
 import com.mongodb.client.{MongoCollection, MongoDatabase}
 import com.mongodb.connection.ClusterType.{REPLICA_SET, SHARDED, STANDALONE}
 import com.mongodb.connection.ServerVersion
@@ -58,11 +58,11 @@ trait RequiresMongoDB extends FlatSpec with Matchers with BeforeAndAfterAll with
 
   lazy val collection: MongoCollection[Document] = database.getCollection(readConfig.collectionName)
 
-  lazy val isStandalone: Boolean = mongoClient.cluster.getDescription.getType == STANDALONE
+  lazy val isStandalone: Boolean = mongoClient.cluster.getType == STANDALONE
 
-  lazy val isReplicaSet: Boolean = mongoClient.cluster.getDescription.getType == REPLICA_SET
+  lazy val isReplicaSet: Boolean = mongoClient.cluster.getType == REPLICA_SET
 
-  lazy val isSharded: Boolean = mongoClient.cluster.getDescription.getType == SHARDED
+  lazy val isSharded: Boolean = mongoClient.cluster.getType == SHARDED
 
   val serverVersionMap: mutable.Map[String, Boolean] = mutable.Map.empty[String, Boolean]
   def serverAtLeast(versions: Int*): Boolean = {

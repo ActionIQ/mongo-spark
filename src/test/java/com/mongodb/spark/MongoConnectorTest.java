@@ -16,7 +16,7 @@
 
 package com.mongodb.spark;
 
-import com.mongodb.MongoClient;
+import com.mongodb.client.MongoClient;
 import com.mongodb.spark.config.ReadConfig;
 import com.mongodb.spark.connection.DefaultMongoClientFactory;
 import org.apache.spark.SparkConf;
@@ -82,7 +82,7 @@ public final class MongoConnectorTest extends JavaRequiresMongoDB {
         assertTrue(created);
     }
 
-    private class JavaMongoClientFactory implements MongoClientFactory {
+    private class JavaMongoClientFactory implements SparkMongoClientFactory {
         private final DefaultMongoClientFactory proxy;
 
         JavaMongoClientFactory(final SparkConf sparkConf) {

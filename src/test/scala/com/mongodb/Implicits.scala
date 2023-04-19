@@ -16,7 +16,9 @@
 
 package com.mongodb
 
-import com.mongodb.connection.Cluster
+import com.mongodb.client.MongoClient
+import com.mongodb.connection.ClusterDescription
+import com.mongodb.internal.connection.Cluster
 
 object Implicits {
 
@@ -24,7 +26,7 @@ object Implicits {
    * A helper to liberate the cluster information from the MongoClient
    */
   implicit class MongoClientWrapper(val mongoClient: MongoClient) extends AnyVal {
-    def cluster: Cluster = mongoClient.getCluster
+    def cluster: ClusterDescription = mongoClient.getClusterDescription
   }
 
 }

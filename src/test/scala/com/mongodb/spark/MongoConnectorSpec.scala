@@ -16,7 +16,9 @@
 
 package com.mongodb.spark
 
-import com.mongodb.MongoClient
+import java.util.concurrent.TimeUnit
+
+import com.mongodb.client.MongoClient
 import com.mongodb.spark.config.ReadConfig
 import com.mongodb.spark.connection.DefaultMongoClientFactory
 import org.apache.spark.SparkConf
@@ -31,7 +33,7 @@ class MongoConnectorSpec extends RequiresMongoDB {
   it should "set the correct localThreshold" in {
     val conf = sparkConf.clone().set(s"${ReadConfig.configPrefix}${ReadConfig.localThresholdProperty}", "5")
     MongoConnector(conf).withMongoClientDo({ client =>
-      client.getMongoClientOptions.getLocalThreshold == 5
+      client.getClusterDescription.getClusterSettings.getLocalThreshold(TimeUnit.MILLISECONDS) == 5
     }) shouldBe true
   }
 
@@ -45,7 +47,7 @@ class MongoConnectorSpec extends RequiresMongoDB {
     MongoConnector(CustomMongoClientFactory(sparkConf)).withMongoClientDo({ client => true }) shouldBe true
   }
 
-  case class CustomMongoClientFactory(sparkConf: SparkConf) extends MongoClientFactory {
+  case class CustomMongoClientFactory(sparkConf: SparkConf) extends SparkMongoClientFactory {
     private final val proxy: DefaultMongoClientFactory = DefaultMongoClientFactory(ReadConfig(sparkConf).asOptions)
 
     def create(): MongoClient = proxy.create()

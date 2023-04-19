@@ -17,12 +17,10 @@
 package com.mongodb.spark.sql
 
 import org.apache.spark.sql.sources._
-
 import org.bson.BsonDocument
 import org.bson.conversions.Bson
-import com.mongodb.MongoClient
 import com.mongodb.spark.RequiresMongoDB
-
+import com.mongodb.MongoClientSettings
 import org.scalatest.prop.PropertyChecks
 
 class MongoRelationHelperSpec extends RequiresMongoDB with PropertyChecks {
@@ -73,7 +71,7 @@ class MongoRelationHelperSpec extends RequiresMongoDB with PropertyChecks {
 
   implicit class PipelineHelpers(val pipeline: Seq[Bson]) {
     def toBson: Seq[BsonDocument] =
-      pipeline.map(_.toBsonDocument(classOf[BsonDocument], MongoClient.getDefaultCodecRegistry))
+      pipeline.map(_.toBsonDocument(classOf[BsonDocument], MongoClientSettings.getDefaultCodecRegistry))
   }
 
   implicit class JsonHelpers(val json: String) {

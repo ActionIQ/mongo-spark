@@ -19,9 +19,11 @@ package com.mongodb.spark.connection
 import java.util.concurrent.TimeUnit
 
 import scala.concurrent.duration.Duration
-
 import org.scalamock.scalatest.proxy.MockFactory
 import com.mongodb.Implicits._
+import com.mongodb.client.internal.MongoClientImpl
+import com.mongodb.client.MongoClient
+import com.mongodb.internal.connection.Cluster
 import com.mongodb.spark.{JavaRequiresMongoDB, RequiresMongoDB}
 import com.mongodb.spark.config.ReadConfig
 
@@ -37,15 +39,15 @@ class MongoClientCacheSpec extends RequiresMongoDB with MockFactory {
   "MongoClientCache" should "create a client and then close the client once released" in {
     val client = clientCache.acquire(clientFactory)
     clientCache.release(client, zeroDuration)
-    client.cluster.isClosed should be(true)
+    getInternalMongoClusterHelper(mongoClient).isClosed should be(true)
   }
 
   it should "create a client and then close the client once released and after the timeout" in {
     val client = clientCache.acquire(clientFactory)
     clientCache.release(client)
-    client.cluster.isClosed should be(false)
+    getInternalMongoClusterHelper(mongoClient).isClosed should be(false)
     Thread.sleep(keepAlive.toMillis * 2)
-    client.cluster.isClosed should be(true)
+    getInternalMongoClusterHelper(mongoClient).isClosed should be(true)
   }
 
   it should "return a different client once released " in {
@@ -78,8 +80,12 @@ class MongoClientCacheSpec extends RequiresMongoDB with MockFactory {
 
     clientCache.shutdown()
 
-    client.cluster.isClosed should be(true)
-    client2.cluster.isClosed should be(true)
+    getInternalMongoClusterHelper(mongoClient).isClosed should be(true)
+    getInternalMongoClusterHelper(mongoClient).isClosed should be(true)
+  }
+
+  def getInternalMongoClusterHelper(mongoClient: MongoClient): Cluster = {
+    mongoClient.asInstanceOf[MongoClientImpl].getCluster
   }
 
 }

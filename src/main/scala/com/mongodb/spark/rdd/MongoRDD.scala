@@ -27,8 +27,8 @@ import org.apache.spark.sql.types.StructType
 import org.apache.spark.sql.{DataFrame, Dataset, SparkSession}
 import org.bson.conversions.Bson
 import org.bson.{BsonDocument, Document}
-import com.mongodb.{MongoClient, MongoCursorNotFoundException}
-import com.mongodb.client.{AggregateIterable, MongoCursor}
+import com.mongodb.MongoCursorNotFoundException
+import com.mongodb.client.{AggregateIterable, MongoClient, MongoCursor}
 import com.mongodb.spark.config.ReadConfig
 import com.mongodb.spark.exceptions.MongoSparkCursorNotFoundException
 import com.mongodb.spark.rdd.api.java.JavaMongoRDD
@@ -162,7 +162,7 @@ class MongoRDD[D: ClassTag](
     context.addTaskCompletionListener[Unit]((ctx: TaskContext) => {
       logDebug("Task completed closing the MongoDB cursor")
       Try(cursor.close())
-      connector.value.releaseClient(client)
+            connector.value.releaseClient(client)
     })
     MongoCursorIterator(cursor)
   }
@@ -180,6 +180,9 @@ class MongoRDD[D: ClassTag](
     }
 
     logDebug(s"Creating cursor for partition #${partition.index}. pipeline = ${partitionPipeline.map(_.toJson).mkString("[", ", ", "]")}")
+    println("***********")
+    println(partitionPipeline)
+    println("***********")
     val aggregateIterable: AggregateIterable[D] = client.getDatabase(readConfig.databaseName)
       .getCollection[D](readConfig.collectionName, classTagToClassOf(ct))
       .withReadConcern(readConfig.readConcern)

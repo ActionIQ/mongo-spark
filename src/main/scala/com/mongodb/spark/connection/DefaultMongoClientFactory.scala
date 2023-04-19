@@ -16,11 +16,13 @@
 
 package com.mongodb.spark.connection
 
-import com.mongodb.{MongoClient, MongoClientOptions, MongoClientURI, MongoDriverInformation}
+import com.mongodb.{ConnectionString, MongoClientSettings, MongoDriverInformation}
+import com.mongodb.client.{MongoClient, MongoClients}
 
 import scala.util.Try
-import com.mongodb.spark.MongoClientFactory
+import com.mongodb.spark.SparkMongoClientFactory
 import com.mongodb.spark.config.{BuildInfo, MongoSharedConfig, ReadConfig}
+import com.mongodb.spark.internal.MongoClientURI
 import org.apache.spark.SPARK_VERSION
 
 private[spark] object DefaultMongoClientFactory {
@@ -34,7 +36,7 @@ private[spark] object DefaultMongoClientFactory {
   }
 }
 
-private[spark] case class DefaultMongoClientFactory(connectionString: String, localThreshold: Option[Int] = None) extends MongoClientFactory {
+private[spark] case class DefaultMongoClientFactory(connectionString: String, localThreshold: Option[Int] = None) extends SparkMongoClientFactory {
   require(Try(new MongoClientURI(connectionString)).isSuccess, s"Invalid '${MongoSharedConfig.mongoURIProperty}' '$connectionString'")
 
   @transient private lazy val mongoDriverInformation = MongoDriverInformation.builder().driverName("mongo-spark")
@@ -43,9 +45,10 @@ private[spark] case class DefaultMongoClientFactory(connectionString: String, lo
     .build()
 
   override def create(): MongoClient = {
-    val builder = new MongoClientOptions.Builder
-    localThreshold.map(builder.localThreshold)
-    val clientURI = new MongoClientURI(connectionString, builder)
-    new MongoClient(clientURI, mongoDriverInformation)
+    //    val builder = new MongoClientSettings.Builder
+    //    localThreshold.map(builder.localThreshold)
+    //    val clientURI = new MongoClientURI(connectionString, builder)
+    //    new MongoClient(clientURI, mongoDriverInformation)
+    MongoClients.create(new ConnectionString(connectionString), mongoDriverInformation)
   }
 }
